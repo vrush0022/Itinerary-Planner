@@ -547,7 +547,7 @@ def forgot_password():
                 cursor.execute("INSERT INTO PASSWORD_RESET(Email,Token,Timestamp) VALUES (%s,%s,%s)",(recipient,token,ts))
                 con.commit()
                 msg = Message("Password Reset Request",
-                              sender="voyager.pythonproj@gmail.com",
+                              sender="",
                               recipients=[recipient]) 
                 msg.html = render_template('mail.html',token=token)
                 mail.send(msg)
@@ -729,7 +729,7 @@ def generateItineraryMail(cursor,itineraryid):
                 placeList.append((placename,address))
         if(email!=''):
             msg = Message("Your trip to "+city,
-                              sender="voyager.pythonproj@gmail.com",
+                              sender="",
                               recipients=[email]) 
     
             msg.html = render_template('itinerary_created.html',city=city,startDate=Date,username=firstname,placeList=placeList)
