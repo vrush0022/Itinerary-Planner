@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='select2.css')}}">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="{{url_for('static', filename='jquery-1.11.1.js')}}"></script>
+<script src="{{url_for('static', filename='jquery-ui.js')}}"></script>
+<script src="{{url_for('static', filename='popper.js')}}"></script>
+<script src="{{url_for('static', filename='bootstrap.js')}}"></script>
+<script src="{{url_for('static', filename='select2.js')}}"></script>
+
+
+<style>
+
+.card-text{
+height:4em;
+word-wrap: break-word;
+text-overflow: ellipsis;
+overflow-y:hidden;
+}
+.col-md-3{
+margin-bottom:30px;
+height:380px;
+
+}
+.shadow-sm{
+background-color: #fff;
+
+}
+.card-body{
+padding:15px;
+height:230px;
+
+}
+
+.placeimg{
+background-repeat: no-repeat;
+background-size: cover;
+background-position: 50% 50%;
+width: 100%;
+height:100%;
+overflow: hidden;
+
+}
+.bg-light{
+padding-top:40px;
+background-color:#f8f9fa!important
+}
+.btn-group{
+margin-top:15px;
+}
+.plname{
+font-weight:bold;
+height:3em;
+}
+.popover{
+max-height:300px;
+max-width:400px;
+width:350px;
+overflow:scroll;
+
+}
+
+#coverimg{
+width:100%;
+-webkit-filter:brightness(50%);
+-moz-filter:brightness(50%);
+}  
+.carousel-caption{
+top:25%;
+}
+
+.mynav{
+position:absolute;
+top:1%;
+z-index:100;
+left:88%;
+
+}
+#floatingdiv{
+position:fixed;
+top:450px;
+left:95%;
+background: #03A9F4;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+text-align:center;
+color: #FFF;
+box-shadow:0px 0px 3px rgba(0,0,0,0.5),3px 3px 3px rgba(0,0,0,0.25);
+position: fixed;
+bottom: 1 / 4 * 3 * @fab-size;
+right: 1 / 4 * 3 * @fab-size;
+font-size: 2.6667em;
+display: inline-block;
+cursor: pointer;
+}
+.modal-body{
+max-height:400px;
+min-height:400px;
+overflow-y:scroll;
+}
+
+.itn_pl{
+line-height:15px;
+cursor: pointer;
+}
+
+.itn_pl:hover{
+color:#007bff;
+}
+
+.txt_underline{
+text-decoration:underline;
+color:#007bff;
+}
+
+#startdate{
+width: 250px;
+position: absolute;
+background-color: white;
+cursor: pointer;
+    
+}
+
+#suggestionsdiv{
+position:relative;
+top:40px;
+height:80px;
+}
+.loginusernav{
+position: absolute;
+top: 2%;
+z-index: 100;
+left: 75%;
+width: 29%;
+}
+</style>
+
+<script>
+$(document).ready(function(){
+
+	$('.datepicker').datepicker({ 
+		minDate:new Date(),
+		dateFormat: 'yy/mm/dd',
+		onSelect:function(dateText, inst){
+			if(dateText!=''){
+				$('#optimizeitinerary').prop('disabled', false);
+				checkOtherItineraryPresent(dateText);
+			}else{
+				$('#optimizeitinerary').prop('disabled', true);
+			}
+
+		}
+	});
+
+	loggedinuser='{{session['username']}}';	
+	$('#floatingdiv').hide();
+	$('#fname').hide();
+	$('#logoutlink').hide();
+	$('#mytrips').hide();
+	$('#floatingdiv').hide();
+
+	if(loggedinuser!=null && loggedinuser!=''){
+		$('#loginlink').hide();
+		$('#signuplink').hide();
+		$('#createitinerarymsg').hide();
+		fname='{{session['fname']}}';	
+		$('#fname').text('Welcome '+fname);
+		$('#fname').show();
+		$('#logoutlink').show();
+		$('#mytrips').show();
+
+	}
+	$('#floatingdiv').click(function(){
+
+		$('.modal-body').html('');
+		$('.modal-title').html('');
+		$('#optimizeitinerary').hide();
+		$('#submititinerary').hide();
+		$('.datepicker').hide();
+		$('.datepicker').datepicker('setDate', null);
+		populateItineraryModal();
+		
+	});
+
+	
+	$("#searchCity").select2({
+		theme: "classic",
+	    minimumInputLength: 1,
+	    placeholder:'Search City',
+	    maximumSelectionSize:1,		
+	    width:'350px',
+	    tags: [],
+	    ajax: {
+	        url: 'searchCity',
+	        dataType: 'json',
+	        type: "GET",
+	        quietMillis: 300,
+	        data: function (term) {
+	        	
+	            return {
+	            	searchTerm: term
+	            };
+	        },
+	        results: function (data) {
+	        	var results=[];
+	        	$.each(data,function(i,object)
+						{
+								
+			                    
+			                    $.each(object, function(property, value) {
+			                    	
+			                    	 results.push({
+			                    		
+			                             id:property ,
+			                             text:value
+			                           });
+							       
+			            	});
+						});
+	        	return {
+	                results: results
+	            };
+								
+	        }
+	    }
+	});
+	
+	$('#searchCity').on('change', function (e) {
+		var selectedCity=$(this).val();
+		if(selectedCity!=null && selectedCity!=''){
+			$('#itinerary_id').val('');
+			loadPlaces(selectedCity)
+			
+		}else{
+			$('#placerow').html('');			
+			$('#floatingdiv').hide();
+			
+		}
+
+		
+	});
+	
+	
+	function loadPlaces(city){
+		$.ajax({
+        type: "GET",
+        url: "viewplace",
+		data: {'placeName':city},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				$.each(jsondata,function(i,object){
+		                    $.each(object, function(property, keyname) {
+								var toappend='';
+								var imagename='';
+								var rating='';
+								var name='';
+								var numberOfReviews='';
+								var description='';
+								var review1='';
+								var review2='';
+								var review3='';
+								var address='';
+								var shortdesc='';
+								var placeid=''
+		                    	 $.each(keyname, function(key, val) {
+									if(key=='placeid'){
+										placeid=val;
+									}
+									if(key=='imagename'){										
+										imagename=val;
+									}else if(key=='name'){
+										name=val;
+									}else if(key=='rating'){
+										rating=val;
+									}else if(key=='desc'){
+										description=val;
+									}else if (key=='numofreview'){
+										numberOfReviews=val;
+									}else if(key=='address'){
+										address=val;
+										if(address=='Not Available'){
+											address='Address Not Available'
+										}
+									}else if(key=='review1'){									
+										review1=val;
+										if(review1=='Not Available'){
+											review1=''
+										}
+									}else if(key=='review2'){
+										review2=val;
+										if(review2=='Not Available'){
+											review2=''
+										}
+									}else if(key=='shortdesc'){
+										shortdesc=val;
+									}
+									
+									
+								 });
+								 
+								 if(description=='Not Available'){
+									description=shortdesc;
+								 }
+								 toappend='<div class="col-md-3"><div class="card mb-3 shadow-sm">													<svg class="bd-placeholder-img card-img-top" width="100%" height="150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img" aria-label="Placeholder: Thumbnail"><rect fill="#55595c" width="100%" height="100%"/><image xlink:href=/static/images/'+imagename+'  class="placeimg"/></svg><div class="card-body"><p class="plname">'+name+'</p><p class="card-text">'+description+'</p><div class="d-flex justify-content-between align-items-center"><small class="text-muted">Rated '+rating+' star from '+numberOfReviews+' reviews </small><div class="btn-group"><button type="button" class="btn  data-trigger="focus" btn-info" data-toggle="popover" title="'+address+'" data-content="'+review1+'.'+review2+'">View More</button><button type="button"class="btn  btn-success addplace" id="'+placeid+'">Add</button></div></div></div></div></div>'
+								 $('#placerow').append(toappend);
+								 $('[data-toggle="popover"]').popover({trigger: 'focus'});
+								
+								
+								 
+		            	});
+					});
+								$('html, body').animate({
+									scrollTop: $("#placerow").offset().top
+								}, 1000);
+								setTimeout(function(){ $('html, body').stop(); }, 1000);
+								
+								if(loggedinuser==null || loggedinuser==''){
+									$('.addplace').hide();	
+								}else{
+									populateWishList()
+								}
+								
+								$('.addplace').click(function(e){
+									e.stopPropagation() ;
+									hassuccess=$(this).hasClass('btn-success');
+									if(hassuccess==true){
+										status=addPlaceToItinerary($(this).attr('id'))
+										if(status=='200'){
+											$(this).removeClass('btn-success');
+											$(this).addClass('btn-danger');
+											$(this).html('Remove');
+										}
+									}else{
+										status=removePlaceFromItinerary($(this).attr('id'))
+										if(status=='200'){
+											$(this).removeClass('btn-danger');
+											$(this).addClass('btn-success');
+											$(this).html('Add');
+										}
+									}
+								});
+			if(loggedinuser!=null && loggedinuser!=''){
+				$('#floatingdiv').show();
+			}
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	
+	}
+	
+	
+	function addPlaceToItinerary(placeid){
+		
+		var status=''
+		$.ajax({
+        type: "POST",
+        url: "addPlaceToItinerary",
+		data: {'placeid':placeid,'city':$('#searchCity').val(),'itinerary_id':$('#itinerary_id').val()},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){
+					itinerary_id=jsondata['itinerary_id'];
+					$('#itinerary_id').val(itinerary_id);
+				}else{
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	
+		return status;
+	}
+	
+	function removePlaceFromItinerary(placeid){
+		
+		var status=''
+		$.ajax({
+        type: "POST",
+        url: "removePlaceFromItinerary",
+		data: {'placeid':placeid,'itinerary_id':$('#itinerary_id').val()},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='500'){
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	
+		return status;
+	}
+	
+	
+	function populateWishList(){
+	
+	$.ajax({
+        type: "GET",
+        url: "fetchCitywiseWishlist",
+		data: {'city':$('#searchCity').val()},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){
+					items=jsondata['items'];
+					items.forEach(function(value){						
+						$('#'+value+'').removeClass('btn-success');
+						$('#'+value+'').addClass('btn-danger');
+						$('#'+value+'').html('Remove');
+					});
+					itinerary_id=jsondata['itinerary_id'];
+					if(itinerary_id!=''){
+						$('#itinerary_id').val(itinerary_id);
+					}
+				}else{
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	
+	}
+	
+	
+	function populateItineraryModal(){
+		$.ajax({
+        type: "GET",
+        url: "populateItineraryModal",
+		data: {'itinerary_id':$('#itinerary_id').val()},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){
+					places=jsondata['places'];
+					counter=0;
+					$.each(places, function(property, value) {
+						counter=counter+1;
+						if(counter==1){
+							if(Object.entries(places).length==1){
+								$('.modal-body').append('<div class="alert alert-danger">Please select atleast 2 places to continue!</div>');
+							}else if(Object.entries(places).length>10){
+								$('.modal-body').append('<div class="alert alert-danger">Maximum 10 places can be visited in a day!</div>');
+							}else{							
+								$('.modal-body').append('<div class="alert alert-info" id="planner_start">Please select your starting location!</div>');
+							}
+							
+						}
+						$('.modal-body').append('<p class="itn_pl" id="pl'+property+'">&#9733;'+value+'</p><br/>');
+						
+						
+					});
+					if(Object.entries(places).length>0){
+					
+						$('.modal-title').html('<b>Your trip to '+$('#searchCity').val()+'</b>');
+						
+						$('#itinerary-modal').modal('toggle');
+						
+						if(counter>10 || counter==1){
+							$('#submititinerary').prop('disabled', true);
+							
+						}else{
+							$('#submititinerary').prop('disabled', false);
+							$('.modal-body').append('<div id="suggestionsdiv"></div>');
+							deferedLoadSuggestions();
+							$('.itn_pl').click(function(){
+								$('.datepicker').show();
+								$('#planner_start').text('Select the date of this trip and click on optimize to know the best route!' );
+								$('#optimizeitinerary').prop('disabled', true);
+								$('#optimizeitinerary').show();
+								$('.itn_pl').removeClass('txt_underline');
+								$(this).addClass('txt_underline');
+							});
+						}
+					}
+				}else{
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	}
+	
+	$('#optimizeitinerary').click(function(){
+		
+		placesObj={};
+		var palce_ids = $('.itn_pl').map(function() {
+					return $(this).attr('id').replace('pl','');
+		});
+		
+		palce_ids=palce_ids.toArray();
+		$.each(palce_ids,function(key,value){
+			placesObj[value]=$('#pl'+value).text().replace(String.fromCharCode(9733),'');
+		});
+
+		start_pt=$('.txt_underline').attr('id').replace('pl','');
+		
+		$.ajax({
+        type: "GET",
+        url: "optimizeItinerary",
+		data: {'itinerary_id':$('#itinerary_id').val(),'starting_place':start_pt,'place_ids':palce_ids.join([separator = '~'])},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if(jsondata!=null){
+				status=jsondata['status'];
+				if(status=='200'){
+					
+					$('.modal-body').html('');
+					$('.modal-body').hide();					
+					$('.datepicker').hide();
+					$('#optimizeitinerary').hide();
+					$('#submititinerary').show();
+					places=jsondata['places'];
+					counter=0;
+					$('.modal-body').append('<div class="alert alert-success" id="planner_start">Your Optimized Route is here!</div>');
+					$.each(places, function(property, value) {
+						counter=counter+1;						
+						$('.modal-body').append('<p class="final_itpl" id="pl'+value+'">'+counter+'.'+placesObj[value]+'</p><br/>');						
+						
+					});
+					$('.modal-body').fadeIn(1000);
+					
+				}else{
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+		
+		
+		
+	});
+	
+	function checkOtherItineraryPresent(stdate){
+	
+		$.ajax({
+        type: "GET",
+        url: "checkIfOtherItineraryPresent",
+		data: {'st_date':stdate},
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){
+					msg=jsondata['msg'];
+					if(msg=='Present'){
+						alert('You already have an itinerary for this date.Creating a new one will delete the old itinerary.');
+					}
+				}else{
+					alert("Oops!Some error occurred");
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	}
+	
+	
+	$('#submititinerary').click(function(){
+		$('#submititinerary').prop('disabled', true);
+		var palce_ids = $('.final_itpl').map(function() {
+					return $(this).attr('id').replace('pl','');
+		});
+		
+		palce_ids=palce_ids.toArray();
+		
+		$.ajax({
+        type: "POST",
+        url: "finalizeItinerary",
+		data: {'itinerary_id':$('#itinerary_id').val(),'st_date':$('.datepicker').val(),'place_ids':palce_ids.join([separator = '~'])},        
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){
+					$('.modal-body').html('');
+					$('.modal-body').append('<div class="alert alert-success" id="planner_start">Itinerary created successfully! We will mail you the details.You will now be redirected...</div>');
+					
+					setTimeout(function(){ 
+						window.location.href='/mytrips';
+					}, 3000);
+					
+				}else{
+					alert("Oops!Some error occurred");
+					$('#submititinerary').prop('disabled', false);
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+		
+		
+
+	});
+	
+	function deferedLoadSuggestions(){
+	
+		var palce_ids = $('.itn_pl').map(function() {
+					return $(this).attr('id').replace('pl','');
+		});
+		
+		palce_ids=palce_ids.toArray();
+		$.ajax({
+        type: "GET",
+        url: "getSuggestions",
+		data: {'place_ids':palce_ids.join([separator = '~']),'city':$('#searchCity').val()},        
+        dataType: "json",
+		async: true,
+        success: function (jsondata) {
+        	
+			if( jsondata != null){
+			status=jsondata['status'];
+				if(status=='200'){
+					recommendations=jsondata['recommendations'];
+					$('#suggestionsdiv').append('<strong>People also visited:</strong><br/>');
+					$.each(recommendations, function(property, value) {
+											
+						$('#suggestionsdiv').append('<span class="text-muted">'+value+'</span><br/>');
+						
+					});
+					
+					
+					
+				}
+							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+        }
+	});
+	
+	}
+	
+	
+})
+</script>
+
+</head>
+
+<body>
+
+<main role="main">
+
+  
+  <div id="carouselExampleSlidesOnly" class="carousel" data-ride="carousel">
+  <div class="carousel-inner">
+    <div class="carousel-item active">
+      <img class="d-block w-100 img-responsive" src="/static/background/mumbai2.jpg" id="coverimg" alt="Mumbai" >
+		<nav class="my-2 my-md-0 mr-md-3 mynav">
+        <a class="btn .btn-link" href="/login" id='loginlink' style="color:#fff;font-weight:bold;" >Login</a>
+        <a class="btn .btn-link" href="/register" id='signuplink' style="color:#fff;font-weight:bold;">Signup</a>
+      </nav>	
+	  <nav class="my-2 my-md-0 mr-md-3 loginusernav">
+	  <input type="hidden" id="itinerary_id" name="itinerary_id" value="">	  
+		<header>
+		<a class="btn .btn-link" id='fname' href='#' style="color:#fff;font-weight:bold;cursor:default;"></a>
+		<a class="btn .btn-link" href="/mytrips" id='mytrips' style="color:#fff;">My Trips</a>
+		<a class="btn .btn-link" href="/logout" id='logoutlink' style="color:#fff;">Logout</a>
+		<header>
+	  </nav>
+	  <div class="carousel-caption d-none d-md-block">
+	  
+			<h1 class="jumbotron-heading">Explore the Top Places to Visit</h1>			
+			<p>        
+				<div class="form-group">
+					<input type="text" id="searchCity" ></input>
+				</div>        
+			</p>
+			<span class="text-muted" id='createitinerarymsg'>Please Login/Signup to create itinerary!</span>
+	</div>
+    </div>
+    
+  </div>
+</div>
+
+  <div class="album py-5 bg-light">
+    <div class="container">
+		<div id='floatingdiv'>
+			<a id='cart' style="text-decoration:none"><span style='color:white'>♥</span></a>
+      </div>
+      <div class="row" id='placerow'>
+			
+      </div>
+    </div>
+  </div>
+
+</main>
+
+
+<div id="itinerary-modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">    
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title"></h4>
+      </div>
+      <div class="modal-body">
+	  
+        
+      </div>
+      <div class="modal-footer">
+		<input class="datepicker form-control"  id="startdate"  readonly="readonly"  placeholder="Select Date of Trip">
+        <button type="button" class="btn btn-success" id='optimizeitinerary' >Optimize</button>
+		<button type="button" class="btn btn-primary" id='submititinerary'>Accept</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</head>
+</html>

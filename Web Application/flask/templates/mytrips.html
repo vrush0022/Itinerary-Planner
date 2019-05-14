@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.css')}}">
+
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="{{url_for('static', filename='jquery-1.11.1.js')}}"></script>
+<script src="{{url_for('static', filename='jquery-ui.js')}}"></script>
+<script src="{{url_for('static', filename='bootstrap.js')}}"></script>
+
+
+<style>
+	
+.container{
+
+
+    background-color: #fff;    
+    box-shadow: 0px 0px 100px 1px #888888;    
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-bottom: 40px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-top: 30px;
+	min-height:550px;
+	
+	}
+	
+body{
+	
+    background-color: #f8f9fa;
+}
+html, body { 
+  margin:0; 
+  padding:0; 
+  height:100%; 
+}
+
+
+.panel-group {
+    margin-bottom: 40px;
+    margin-top: 30px;
+	padding:20px;
+}
+
+.border-bottom { border-bottom: 1px solid #e5e5e5; }
+
+
+.lh-100 { line-height: 1; }
+.lh-125 { line-height: 1.25; }
+.lh-150 { line-height: 1.5; }
+
+.text-muted {
+    color: #6c757d!important;
+}
+
+.delbutton{
+    float: right;
+    height: 28px;
+    padding: 2px;
+    top: -5px;
+    position: relative;
+}
+
+.loginusernav{
+	position: absolute;
+    top: 2%;
+    z-index: 100;
+    left: 70%;
+    width: 29%;
+}
+	</style>
+<script>
+$(document).ready(function(){
+$('.delbutton').click(function(){
+
+	$.ajax({
+        type: "POST",
+        url: "delItinerary",
+		data: {'itinerary_id':$(this).attr('id')},        
+        dataType: "json",
+		async: false,
+        success: function (jsondata) {        	
+			if( jsondata != null){
+				status=jsondata['status'];
+				if(status=='200'){			
+					location.reload();
+					
+					
+				}else{
+					alert("Oops!Some error occurred");
+					location.reload();
+					
+				}							
+			}
+        },error: function (e, status) {
+
+            if (e.status == 500)
+                alert("Oops!Some error occurred");
+				location.reload();
+        }
+	});
+
+});
+
+});
+</script>
+  </head>
+
+  <body>
+
+    <!-- Begin page content -->
+    <main role="main" class="container">
+	<nav class="my-2 my-md-0 mr-md-3 loginusernav">
+	  <input type="hidden" id="itinerary_id" name="itinerary_id" value="">	  
+		<header>
+		<a class="btn .btn-link" id='fname' href='#' style="font-weight:bold;cursor:default;">Welcome {{session['fname']}}</a>
+		<a class="btn .btn-link" href="/landing_page" id='mytrips'>Home</a>
+		<a class="btn .btn-link" href="/logout" id='logoutlink'>Logout</a>
+		<header>
+	  </nav>
+      <h1 class="mt-3">Your Upcoming trips</h1>
+
+{% if mytrips|length >0 %}      
+<div class="panel-group" id="accordion">
+		
+	  {% for key,value in mytrips.items() %}
+	  
+	<div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">	  
+		<a data-toggle="collapse" data-parent="#accordion" href="#collapse{{loop.index}}"><span>&#9776;<span><strong style="margin-left:10px">{{key[0]}}</strong><strong style="margin-left:10px">{{key[1]}}</strong></a>
+		<button type="button" class="btn btn-danger delbutton" id='{{key[2]}}'>Delete</button>
+      </h4>
+    </div>
+	{% if loop.index==1 %}
+    <div id="collapse{{loop.index}}" class="panel-collapse collapse in">
+	{% endif %}
+	{% if loop.index!=1 %}
+	<div id="collapse{{loop.index}}" class="panel-collapse collapse">
+	{% endif %}
+	
+	
+      <div class="panel-body">
+		<p><strong>Itinerary:</strong></p>
+        {% for place in value %}
+			<p>{{loop.index}}-{{place}}</p>
+		
+		{% endfor %}
+      </div>
+    </div>
+  </div>
+  
+  {% endfor %}
+  
+</div>
+{% endif %}	
+{% if mytrips|length ==0 %}	
+<div class="alert alert-warning">
+  <strong>You have not created any trips yet!</strong> 
+</div>
+{% endif %}	
+	  
+    </main>
+	
+    
+  </body>
+</html>
+

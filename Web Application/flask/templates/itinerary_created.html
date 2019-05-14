@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.css')}}">
+	<style>
+	
+	
+
+.border-bottom { border-bottom: 1px solid #e5e5e5; }
+
+
+.lh-100 { line-height: 1; }
+.lh-125 { line-height: 1.25; }
+.lh-150 { line-height: 1.5; }
+
+.text-muted {
+    color: #6c757d!important;
+}
+	</style>
+  </head>
+
+  <body>
+
+    <!-- Begin page content -->
+    <main role="main" class="container">
+      <h1 class="mt-3">Dear {{username}},</h1>
+      <p class="lead">Below is the optimized route for your trip to {{city}} on {{startDate}}.</p>
+	  
+	  {% for place in placeList %}
+		<div class="media pt-3">
+		<p class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+			<strong class="d-block text-gray-dark">{{place[0]}}</strong><br/>
+			<strong class="text-muted">{{place[1]}}</strong>
+		</p>
+		
+		</div>
+	{% endfor %}
+      
+    </main>
+	<br/>
+	<br/>
+	<footer class="footer">
+      <div class="container">
+        <span class="text-muted">Best,<br/>Team Voyager</span>
+      </div>
+    </footer>
+    
+  </body>
+</html>
+
